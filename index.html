@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Klimaatklok · 2026</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body class="era-now">
+
+<canvas id="klok-canvas"></canvas>
+<div id="label-layer"></div>
+
+<!-- Year readout — top-left -->
+<div id="year-readout">
+  <span class="yr-num" id="year-display">2026</span>
+  <span class="yr-meta" id="year-meta"><span class="pulse"></span>Mei · nu</span>
+</div>
+
+<!-- Brand mark — top-right -->
+<div id="brand">
+  Klimaatklok
+  <span class="sub">Ukkel · 50.79°N</span>
+  <span class="sub note">Bron: ERA5 + CMIP6 (Open-Meteo)</span>
+</div>
+
+<!-- Drag hint, low-key -->
+<div id="drag-hint">sleep om te draaien&nbsp;&nbsp;·&nbsp;&nbsp;scroll voor jaren&nbsp;&nbsp;·&nbsp;&nbsp;klik op een jaar om in te typen</div>
+
+<!-- Help toggle bottom-right -->
+<button id="help-btn" aria-label="toon uitleg">?</button>
+
+<!-- Detail overlay -->
+<section id="detail" hidden>
+  <button id="detail-close" aria-label="sluiten">×</button>
+  <div class="detail-head">
+    <div class="dt-year" id="dt-year">2024</div>
+    <div class="dt-month" id="dt-month">Juli</div>
+    <div class="dt-anom" id="dt-anom">+3,1 °C</div>
+    <div class="dt-label" id="dt-label">warmer dan klimaatnorm</div>
+  </div>
+  <div class="detail-body">
+    <h3>Deze maand door de jaren heen</h3>
+    <p class="dt-intro">
+      Hoe heeft deze maand zich de afgelopen 25 jaar gedragen — en wat zegt de extrapolatie?
+    </p>
+    <div id="month-chart"></div>
+    <p class="dt-foot">
+      <span class="sw past"></span> gemeten
+      <span class="sw future"></span> voorspeld
+      <span class="sw avg"></span> 10-jaars gemiddelde
+    </p>
+  </div>
+</section>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
