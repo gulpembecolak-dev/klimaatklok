@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Klimaatklok · 2026</title>
+<meta name="description" content="Interactieve 3D-klimaatklok voor Ukkel, België — maandelijkse temperatuuranomalieën van 2015 tot 2040.">
 <link rel="stylesheet" href="style.css">
 <script type="importmap">
 {
@@ -38,15 +39,21 @@
 <!-- Help toggle bottom-right -->
 <button id="help-btn" aria-label="toon uitleg">?</button>
 
-<!-- Detail overlay -->
+<!-- ============================================= -->
+<!--  Detail story-page (enriched)                -->
+<!-- ============================================= -->
 <section id="detail" hidden>
   <button id="detail-close" aria-label="sluiten">×</button>
-  <div class="detail-head">
+
+  <!-- A1. Hero -->
+  <div class="detail-head" id="detail-head">
     <div class="dt-year" id="dt-year">2024</div>
     <div class="dt-month" id="dt-month">Juli</div>
     <div class="dt-anom" id="dt-anom">+3,1 °C</div>
     <div class="dt-label" id="dt-label">warmer dan klimaatnorm</div>
   </div>
+
+  <!-- A2. Chart -->
   <div class="detail-body">
     <h3>Deze maand door de jaren heen</h3>
     <p class="dt-intro">
@@ -58,6 +65,180 @@
       <span class="sw future"></span> voorspeld
       <span class="sw avg"></span> 10-jaars gemiddelde
     </p>
+
+    <!-- A3. Cijfers grid -->
+    <div id="cijfers-grid">
+      <div class="cijfer-card" id="cij-warmste">
+        <span class="cij-label">Warmste</span>
+        <span class="cij-value" id="cij-warmste-val">—</span>
+        <span class="cij-sub" id="cij-warmste-sub"></span>
+      </div>
+      <div class="cijfer-card" id="cij-koudste">
+        <span class="cij-label">Koudste</span>
+        <span class="cij-value" id="cij-koudste-val">—</span>
+        <span class="cij-sub" id="cij-koudste-sub"></span>
+      </div>
+      <div class="cijfer-card" id="cij-gemiddelde">
+        <span class="cij-label">Gemiddelde</span>
+        <span class="cij-value" id="cij-gem-val">—</span>
+        <span class="cij-sub" id="cij-gem-sub">2015–2026</span>
+      </div>
+      <div class="cijfer-card" id="cij-trend">
+        <span class="cij-label">Trend</span>
+        <span class="cij-value" id="cij-trend-val">—</span>
+        <span class="cij-sub" id="cij-trend-sub">per decennium</span>
+      </div>
+    </div>
+
+    <!-- A4. Verhaal -->
+    <div id="verhaal-section">
+      <h3>Verhaal</h3>
+      <p id="verhaal-text" class="verhaal-text"></p>
+    </div>
+
+    <!-- A5. Bronnen -->
+    <div id="bronnen-section">
+      <p class="bronnen-text">
+        <strong>Bronnen:</strong>
+        ERA5 reanalyse via <a href="https://open-meteo.com/en/docs/historical-weather-api" target="_blank" rel="noopener">Open-Meteo Archive API</a> ·
+        CMIP6 HighResMIP (EC-Earth3P-HR) via <a href="https://open-meteo.com/en/docs/climate-api" target="_blank" rel="noopener">Open-Meteo Climate API</a> ·
+        Klimaatnorm 1991–2020, KMI Ukkel ·
+        <a href="https://www.klimaat.be" target="_blank" rel="noopener">klimaat.be</a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= -->
+<!--  Informatie overlay — klimaat actie           -->
+<!-- ============================================= -->
+<section id="info-overlay" hidden>
+  <button id="info-close" aria-label="sluiten">×</button>
+
+  <div class="info-content">
+    <!-- Oorzaken -->
+    <div class="info-section">
+      <h2 class="info-heading">Oorzaken</h2>
+      <p class="info-lead">Waarom verandert het klimaat?</p>
+      <div class="info-stats-row">
+        <div class="info-stat">
+          <span class="info-stat-big">427 ppm</span>
+          <span class="info-stat-label">CO₂ in de atmosfeer (2024)</span>
+          <span class="info-stat-sub">280 ppm vóór de industrialisering</span>
+        </div>
+        <div class="info-stat">
+          <span class="info-stat-big">7,4 ton</span>
+          <span class="info-stat-label">CO₂ per inwoner/jaar in België</span>
+          <span class="info-stat-sub">Wereldgemiddelde: 4,7 ton</span>
+        </div>
+        <div class="info-stat">
+          <span class="info-stat-big">+1,2 °C</span>
+          <span class="info-stat-label">Mondiale opwarming sinds 1850</span>
+          <span class="info-stat-sub">België: +1,9 °C</span>
+        </div>
+      </div>
+      <p class="info-body">
+        De verbranding van fossiele brandstoffen — steenkool, olie en gas — pompt broeikasgassen in de atmosfeer. CO₂ en methaan houden warmte vast en verstoren het klimaatevenwicht dat duizenden jaren stabiel bleef.
+      </p>
+    </div>
+
+    <!-- Gevolgen voor België -->
+    <div class="info-section">
+      <h2 class="info-heading">Gevolgen voor België</h2>
+      <p class="info-lead">Wat merken we nu al — en wat komt eraan?</p>
+      <div class="gevolgen-grid">
+        <div class="gevolg-card warm">
+          <span class="gevolg-icon">🌡</span>
+          <span class="gevolg-title">Hittegolven</span>
+          <span class="gevolg-data">+0,3/decennium</span>
+          <span class="gevolg-text">Het KMI registreert meer, langere en intensere hittegolven. In 2022 werd het record gebroken met 4 hittegolven in één jaar.</span>
+        </div>
+        <div class="gevolg-card cool">
+          <span class="gevolg-icon">🌊</span>
+          <span class="gevolg-title">Zeespiegelstijging</span>
+          <span class="gevolg-data">+20 cm / 50 jaar</span>
+          <span class="gevolg-text">De Noordzeespiegel stijgt met 2,5 mm/jaar. 85% van de Belgische kustzone ligt onder 5 meter — het Masterplan Kustveiligheid is in uitvoering.</span>
+        </div>
+        <div class="gevolg-card warm">
+          <span class="gevolg-icon">⛈</span>
+          <span class="gevolg-title">Overstromingen</span>
+          <span class="gevolg-data">Juli 2021</span>
+          <span class="gevolg-text">De Maas- en Vesderoverstromingen kostten 39 mensenlevens en miljarden euro's schade. Extreme neerslag neemt toe door een warmer klimaat.</span>
+        </div>
+        <div class="gevolg-card cool">
+          <span class="gevolg-icon">🌿</span>
+          <span class="gevolg-title">Biodiversiteit</span>
+          <span class="gevolg-data">−30% insecten</span>
+          <span class="gevolg-text">Warmere winters verstoren ecosystemen. Vlaamse broedvogels verschuiven noordwaarts. Invasieve soorten rukken op.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Acties -->
+    <div class="info-section">
+      <h2 class="info-heading">Wat kunt u doen?</h2>
+      <p class="info-lead">Kleine stappen, groot verschil — persoonlijk en collectief.</p>
+
+      <h4 class="actie-categorie">Persoonlijk</h4>
+      <div class="acties-grid">
+        <div class="actie-card">
+          <span class="actie-icon">🍽</span>
+          <span class="actie-title">Voedsel</span>
+          <span class="actie-text">Minder vlees, meer lokaal en seizoensgebonden eten. Een plantaardig dieet bespaart tot 1,5 ton CO₂ per jaar.</span>
+        </div>
+        <div class="actie-card">
+          <span class="actie-icon">🚲</span>
+          <span class="actie-title">Vervoer</span>
+          <span class="actie-text">Fiets en openbaar vervoer voor korte afstanden. Eén retorvlucht Brussel–Barcelona = 0,5 ton CO₂.</span>
+        </div>
+        <div class="actie-card">
+          <span class="actie-icon">⚡</span>
+          <span class="actie-title">Energie</span>
+          <span class="actie-text">Isoleer uw woning, schakel over op een warmtepomp of zonnepanelen. Vlaamse premies maken dit toegankelijker.</span>
+        </div>
+        <div class="actie-card">
+          <span class="actie-icon">♻️</span>
+          <span class="actie-title">Consumptie</span>
+          <span class="actie-text">Koop minder, kies bewuster, geef tweedehands een kans. De circulaire economie begint bij u.</span>
+        </div>
+      </div>
+
+      <h4 class="actie-categorie">Collectief</h4>
+      <div class="acties-grid">
+        <div class="actie-card">
+          <span class="actie-icon">🗳</span>
+          <span class="actie-title">Stem</span>
+          <span class="actie-text">Maak klimaatbeleid een stemcriterium. Kijk naar de klimaatscorekaart van politieke partijen.</span>
+        </div>
+        <div class="actie-card">
+          <span class="actie-icon">📢</span>
+          <span class="actie-title">Druk</span>
+          <span class="actie-text">Steun burgerinitiatieven, teken petities, neem deel aan klimaatmarsen. Collectieve druk werkt.</span>
+        </div>
+        <div class="actie-card">
+          <span class="actie-icon">🏘</span>
+          <span class="actie-title">Gemeenschap</span>
+          <span class="actie-text">Sluit u aan bij een energiecoöperatie, start een buurttuin, deel kennis. Lokale actie inspireert.</span>
+        </div>
+        <div class="actie-card">
+          <span class="actie-icon">📋</span>
+          <span class="actie-title">Beleid</span>
+          <span class="actie-text">Het Vlaams Klimaatplan en de EU Green Deal zetten kaders. Informeer u en houd bestuurders verantwoordelijk.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bronnen -->
+    <div class="info-section info-bronnen">
+      <h2 class="info-heading">Bronnen</h2>
+      <ul class="bronnen-list">
+        <li><a href="https://www.meteo.be" target="_blank" rel="noopener">KMI / Meteo België</a> — meetgegevens Ukkel sinds 1833</li>
+        <li><a href="https://www.klimaat.be" target="_blank" rel="noopener">klimaat.be</a> — Belgisch klimaatportaal (KMI)</li>
+        <li><a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> — ERA5 reanalyse + CMIP6 projecties</li>
+        <li><a href="https://www.ipcc.ch/report/ar6/wg1/" target="_blank" rel="noopener">IPCC AR6 WG1</a> — Physical Science Basis (2021)</li>
+        <li><a href="https://www.worldometers.info/co2-emissions/belgium-co2-emissions/" target="_blank" rel="noopener">Worldometers</a> — België CO₂-emissies</li>
+      </ul>
+    </div>
   </div>
 </section>
 
