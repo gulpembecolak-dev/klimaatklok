@@ -66,11 +66,64 @@ function maandReeks(monthIdx) {
   return reeks;
 }
 
+// =====================================================
+//  VERHALEN — month-specific narrative templates (NL)
+// =====================================================
+const MAAND_CONTEXT = [
+  // JAN
+  { seizoen: 'winter', norm: 3.27, context: 'Januari zet de toon voor het winterseizoen. In Ukkel bepaalt deze maand vaak of het jaar mild of streng begint. Zachte januari\'s worden steeds gebruikelijker — het KMI meet sinds 1954 een opwarming van +0,3 °C per decennium.' },
+  // FEB
+  { seizoen: 'winter', norm: 3.72, context: 'Februari is traditioneel de koudste maand in België, maar de winters worden merkbaar milder. De sneeuwdagen in Ukkel zijn gedaald van gemiddeld 18 per jaar (1961–1990) naar minder dan 10.' },
+  // MAA
+  { seizoen: 'lente', norm: 6.34, context: 'Maart markeert het begin van de lente. De fenologische lente — het moment waarop bomen uitlopen — verschuift in België gemiddeld 2,5 dag per decennium naar voren.' },
+  // APR
+  { seizoen: 'lente', norm: 9.51, context: 'April is een overgangsmaand met sterk wisselend weer. De nachtvorst in april wordt zeldzamer, wat gevolgen heeft voor de fruitteelt in Haspengouw en de Ardennen.' },
+  // MEI
+  { seizoen: 'lente', norm: 13.18, context: 'Mei is de maand waarin de natuur volop ontwaakt. De gemiddelde temperatuur in Ukkel kruipt steeds dichter naar het niveau dat vroeger bij juni hoorde.' },
+  // JUN
+  { seizoen: 'zomer', norm: 16.10, context: 'Juni luidt het zomerseizoen in. Het aantal zomerdagen (≥25 °C) neemt toe in Ukkel — van gemiddeld 3 per maand naar bijna 6 in recente decennia.' },
+  // JUL
+  { seizoen: 'zomer', norm: 18.15, context: 'Juli is doorgaans de warmste maand in Ukkel. Het KMI registreert een toename van hittegolven: +0,3 per decennium sinds 1981, met langere duur en hogere intensiteit.' },
+  // AUG
+  { seizoen: 'zomer', norm: 17.96, context: 'Augustus sluit de zomer af. Stedelijk hitte-eilandeffect maakt Brussel tot 3 °C warmer dan het omliggende platteland — een groeiend gezondheidsrisico.' },
+  // SEP
+  { seizoen: 'herfst', norm: 14.89, context: 'September is een herfstmaand die steeds vaker zomers aanvoelt. De Indiaanse zomer wordt frequenter, en de eerste herfstvorst komt later dan ooit.' },
+  // OKT
+  { seizoen: 'herfst', norm: 11.19, context: 'Oktober brengt de herfst volop. De bladverkleuring verschuift: bomen houden hun bladeren langer vast, wat wijst op een verlengd groeiseizoen.' },
+  // NOV
+  { seizoen: 'herfst', norm: 6.95, context: 'November wordt gekenmerkt door toenemende neerslag. Het KMI noteert een stijging van 7% in de jaarlijkse neerslag in Ukkel over de laatste 120 jaar.' },
+  // DEC
+  { seizoen: 'winter', norm: 3.94, context: 'December sluit het jaar af. Een witte kerst in Ukkel is steeds zeldzamer — de kans is gedaald van 15% naar minder dan 5% in de afgelopen 30 jaar.' }
+];
+
+function generateVerhaal(monthIdx, year, anomaly) {
+  const mc = MAAND_CONTEXT[monthIdx];
+  const maand = MAANDEN_VOL[monthIdx];
+  const absAnom = Math.abs(anomaly);
+  const sign = anomaly >= 0;
+  const isVoorsp = isVoorspelling(year);
+
+  let intensiteit;
+  if (absAnom >= 3) intensiteit = 'uitzonderlijk ' + (sign ? 'warm' : 'koud');
+  else if (absAnom >= 1.5) intensiteit = 'duidelijk ' + (sign ? 'warmer' : 'kouder') + ' dan normaal';
+  else if (absAnom >= 0.5) intensiteit = (sign ? 'iets warmer' : 'iets kouder') + ' dan de norm';
+  else intensiteit = 'dicht bij de klimaatnorm';
+
+  let zin1;
+  if (isVoorsp) {
+    zin1 = `De CMIP6-projectie (EC-Earth3P-HR, SSP5-8.5) suggereert dat ${maand.toLowerCase()} ${year} ${intensiteit} zou zijn in Ukkel, met een anomalie van ${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(1).replace('.', ',')} °C ten opzichte van de klimaatnorm 1991–2020.`;
+  } else {
+    zin1 = `${maand} ${year} was ${intensiteit} in Ukkel — de maandgemiddelde temperatuur lag ${absAnom.toFixed(1).replace('.', ',')} °C ${sign ? 'boven' : 'onder'} de klimaatnorm van ${mc.norm.toFixed(1).replace('.', ',')} °C (1991–2020).`;
+  }
+
+  return `${zin1} ${mc.context}`;
+}
+
 export {
   DATA, HISTORISCH, VOORSPELLING, KLIMAATNORM_1991_2020,
   JAAR_MIN, JAAR_MAX, LAATSTE_GEMETEN_JAAR,
   HUIDIGE_MAAND_INDEX, HUIDIG_JAAR,
-  MAANDEN, MAANDEN_VOL,
-  isVoorspelling, maandReeks
+  MAANDEN, MAANDEN_VOL, MAAND_CONTEXT,
+  isVoorspelling, maandReeks, generateVerhaal
 };
 
