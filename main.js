@@ -687,9 +687,9 @@ const helpBtn = document.getElementById('help-btn');
 let helpTimer = null;
 if (helpBtn) {
   helpBtn.addEventListener('click', () => {
-    document.body.classList.add('help-open');
-    clearTimeout(helpTimer);
-    helpTimer = setTimeout(() => document.body.classList.remove('help-open'), 4000);
+    // Replay the cinematic tour on ? click
+    localStorage.removeItem('klimaatklok-toured');
+    runTour();
   });
 }
 
@@ -1265,7 +1265,8 @@ const _showInfoHint = setInterval(() => {
 //  Feature C: Cinematic Tour (onboarding)
 // =====================================================
 function runTour() {
-  if (localStorage.getItem('klimaatklok-toured') === 'true') return;
+  // Remove any existing tour hints (for replay via ? button)
+  document.querySelectorAll('.tour-hint').forEach(el => el.remove());
 
   const tourSteps = [
     {
@@ -1383,10 +1384,12 @@ function runTour() {
   }, 1500 + tourSteps.length * 1200 + 500);
 }
 
-// Trigger tour after intro animation completes
+// Trigger tour after intro animation completes (first visit only)
 const _tourWatcher = setInterval(() => {
   if (document.body.classList.contains('intro-done')) {
     clearInterval(_tourWatcher);
-    setTimeout(runTour, 800);
+    if (localStorage.getItem('klimaatklok-toured') !== 'true') {
+      setTimeout(runTour, 800);
+    }
   }
 }, 200);
