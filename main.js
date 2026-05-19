@@ -1264,9 +1264,18 @@ const _showInfoHint = setInterval(() => {
 // =====================================================
 //  Feature C: Cinematic Tour (onboarding)
 // =====================================================
+let _tourTimeouts = [];
+let _tourDismiss = null;   // current dismiss function ref (for removal)
+let _tourClickFn = null;
+let _tourKeyFn = null;
+
 function runTour() {
-  // Remove any existing tour hints (for replay via ? button)
+  // --- Cleanup any previous tour run ---
+  _tourTimeouts.forEach(t => clearTimeout(t));
+  _tourTimeouts = [];
   document.querySelectorAll('.tour-hint').forEach(el => el.remove());
+  if (_tourClickFn) document.removeEventListener('click', _tourClickFn);
+  if (_tourKeyFn) document.removeEventListener('keydown', _tourKeyFn);
 
   const tourSteps = [
     {
@@ -1321,6 +1330,8 @@ function runTour() {
   function dismissTour() {
     if (tourDismissed) return;
     tourDismissed = true;
+    _tourTimeouts.forEach(t => clearTimeout(t));
+    _tourTimeouts = [];
     hints.forEach(h => {
       h.classList.remove('visible');
       h.classList.add('fade-out');
@@ -1329,22 +1340,23 @@ function runTour() {
       hints.forEach(h => h.remove());
     }, 600);
     localStorage.setItem('klimaatklok-toured', 'true');
-    document.removeEventListener('click', onTourClick);
-    document.removeEventListener('keydown', onTourKey);
+    document.removeEventListener('click', _tourClickFn);
+    document.removeEventListener('keydown', _tourKeyFn);
+    _tourClickFn = null;
+    _tourKeyFn = null;
   }
 
-  function onTourClick(e) {
-    // Don't dismiss if clicking on help or close buttons
+  _tourClickFn = (e) => {
     if (e.target.closest('#help-btn')) return;
     dismissTour();
-  }
-  function onTourKey(e) {
+  };
+  _tourKeyFn = () => {
     dismissTour();
-  }
+  };
 
   // Stagger hints with delays
   tourSteps.forEach((step, idx) => {
-    setTimeout(() => {
+    const t = setTimeout(() => {
       if (tourDismissed) return;
 
       const hint = document.createElement('div');
@@ -1372,16 +1384,18 @@ function runTour() {
           hint.classList.add('visible');
         });
       });
-    }, 1500 + idx * 1200); // Start 1.5s after intro, 1.2s between each
+    }, 1500 + idx * 1200);
+    _tourTimeouts.push(t);
   });
 
   // Wait for all hints to appear before listening for dismiss
-  setTimeout(() => {
+  const tDismiss = setTimeout(() => {
     if (!tourDismissed) {
-      document.addEventListener('click', onTourClick);
-      document.addEventListener('keydown', onTourKey);
+      document.addEventListener('click', _tourClickFn);
+      document.addEventListener('keydown', _tourKeyFn);
     }
   }, 1500 + tourSteps.length * 1200 + 500);
+  _tourTimeouts.push(tDismiss);
 }
 
 // Trigger tour after intro animation completes (first visit only)
