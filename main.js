@@ -1297,11 +1297,21 @@ function runTour() {
       caption: 'klik om in te typen'
     },
     {
-      // Cone tip — click for details
+      // Cone tip — click for details (anchor to FEB label = big warm cone)
       getPos: () => {
-        const cx = window.innerWidth / 2;
-        const cy = window.innerHeight / 2;
-        return { x: cx + 180, y: cy + 80 };
+        const labels = document.querySelectorAll('.month-label');
+        const feb = labels[1]; // FEB = index 1
+        if (feb) {
+          const r = feb.getBoundingClientRect();
+          // Offset inward toward clock center (where the cone body is)
+          const cx = window.innerWidth / 2;
+          const cy = window.innerHeight / 2;
+          const lx = r.left + r.width / 2;
+          const ly = r.top + r.height / 2;
+          // 40% from label toward center = on the cone
+          return { x: lx + (cx - lx) * 0.35, y: ly + (cy - ly) * 0.35 };
+        }
+        return { x: window.innerWidth / 2 + 180, y: window.innerHeight / 2 + 80 };
       },
       caption: 'klik voor details'
     },
@@ -1316,9 +1326,9 @@ function runTour() {
       caption: 'stapeling'
     },
     {
-      // Scroll area — scroll for years
+      // Scroll area — scroll for years (left side, clear of bottom-center text)
       getPos: () => {
-        return { x: window.innerWidth / 2, y: window.innerHeight - 50 };
+        return { x: 140, y: window.innerHeight - 50 };
       },
       caption: 'scroll voor jaren'
     }
