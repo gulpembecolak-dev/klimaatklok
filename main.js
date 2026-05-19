@@ -453,8 +453,9 @@ mareyIndicator.style.cssText = `
   font-size: 9px; letter-spacing: 0.35em; text-transform: uppercase;
   color: rgba(200,212,232,0.5); font-family: inherit; font-weight: 500;
   opacity: 0; transition: opacity 0.6s ease;
-  pointer-events: none; display: flex; align-items: center; gap: 10px;
+  cursor: pointer; display: flex; align-items: center; gap: 10px;
 `;
+mareyIndicator.addEventListener('click', () => toggleMarey());
 document.body.appendChild(mareyIndicator);
 
 const mareyCountEl = document.createElement('div');
@@ -623,7 +624,7 @@ function eraClass(year) {
   return 'era-future-far';
 }
 function metaText(year) {
-  if (year === HUIDIG_JAAR)  return '<span class="pulse"></span>Mei · nu · ERA5';
+  if (year === HUIDIG_JAAR)  return `<span class="pulse"></span>${MAANDEN_VOL[HUIDIGE_MAAND_INDEX]} · nu · ERA5`;
   if (isVoorspelling(year))  return 'EC-Earth3P-HR · SSP5-8.5 · ' + (year - HUIDIG_JAAR) + 'j vooruit';
   return 'ERA5 · gemeten · ' + (HUIDIG_JAAR - year) + 'j geleden';
 }

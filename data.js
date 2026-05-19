@@ -51,9 +51,10 @@ const LAATSTE_GEMETEN_JAAR = 2026;
 const MAANDEN = ["JAN","FEB","MAA","APR","MEI","JUN","JUL","AUG","SEP","OKT","NOV","DEC"];
 const MAANDEN_VOL = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
 
-// Huidige real-world moment voor de wijzer (update als nodig)
-const HUIDIGE_MAAND_INDEX = 4;  // Mei
-const HUIDIG_JAAR = 2026;
+// Huidige real-world moment voor de wijzer — automatisch bijgewerkt
+const _now = new Date();
+const HUIDIGE_MAAND_INDEX = _now.getMonth();  // 0=Jan, 1=Feb, … 11=Dec
+const HUIDIG_JAAR = _now.getFullYear();
 
 function isVoorspelling(year) { return year > LAATSTE_GEMETEN_JAAR; }
 
