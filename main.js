@@ -1297,21 +1297,20 @@ function runTour() {
       caption: 'klik om in te typen'
     },
     {
-      // Cone tip — click for details (anchor to FEB label = big warm cone)
+      // Cone tip — click for details (right on FEB cone body)
       getPos: () => {
         const labels = document.querySelectorAll('.month-label');
-        const feb = labels[1]; // FEB = index 1
+        const feb = labels[1]; // FEB = index 1, biggest warm cone in 2026
         if (feb) {
           const r = feb.getBoundingClientRect();
-          // Offset inward toward clock center (where the cone body is)
           const cx = window.innerWidth / 2;
           const cy = window.innerHeight / 2;
           const lx = r.left + r.width / 2;
           const ly = r.top + r.height / 2;
-          // 40% from label toward center = on the cone
-          return { x: lx + (cx - lx) * 0.35, y: ly + (cy - ly) * 0.35 };
+          // 15% from label toward center = right on the cone body
+          return { x: lx + (cx - lx) * 0.15, y: ly + (cy - ly) * 0.15 };
         }
-        return { x: window.innerWidth / 2 + 180, y: window.innerHeight / 2 + 80 };
+        return { x: window.innerWidth * 0.7, y: window.innerHeight * 0.75 };
       },
       caption: 'klik voor details'
     },
@@ -1326,9 +1325,9 @@ function runTour() {
       caption: 'stapeling'
     },
     {
-      // Scroll area — scroll for years (left side, clear of bottom-center text)
+      // Scroll area — scroll for years (left side empty area)
       getPos: () => {
-        return { x: 140, y: window.innerHeight - 50 };
+        return { x: window.innerWidth * 0.2, y: window.innerHeight * 0.5 };
       },
       caption: 'scroll voor jaren'
     }
