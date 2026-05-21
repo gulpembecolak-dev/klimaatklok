@@ -2,10 +2,10 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Klimaatklok · 2026</title>
 <meta name="description" content="Interactieve 3D-klimaatklok voor Ukkel, België — maandelijkse temperatuuranomalieën van 2015 tot 2040.">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 <script type="importmap">
 {
   "imports": {
@@ -242,6 +242,26 @@
   </div>
 </section>
 
-<script type="module" src="main.js?v=5"></script>
+<!-- Mobile toolbar -->
+<div id="mobile-toolbar">
+  <div class="mob-btn-wrap">
+    <button id="mob-prev" aria-label="vorig jaar">‹</button>
+    <span class="mob-label">Vorig</span>
+  </div>
+  <div class="mob-btn-wrap">
+    <button id="mob-stapeling" aria-label="stapeling">S</button>
+    <span class="mob-label">Stapeling</span>
+  </div>
+  <div class="mob-btn-wrap">
+    <button id="mob-info" aria-label="informatie">i</button>
+    <span class="mob-label">Info</span>
+  </div>
+  <div class="mob-btn-wrap">
+    <button id="mob-next" aria-label="volgend jaar">›</button>
+    <span class="mob-label">Volgend</span>
+  </div>
+</div>
+
+<script type="module" src="main.js?v=6"></script>
 </body>
 </html>
