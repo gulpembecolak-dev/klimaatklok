@@ -488,17 +488,155 @@ body.intro-done #help-btn { opacity: 0.7; }
 }
 .dt-foot .sw.avg { background: var(--ink); height: 2px; }
 
-@media (max-width: 720px) {
-  .yr-num { font-size: 42px; }
-  .yr-input { font-size: 42px; width: 5ch; }
-  .ghost-btn { width: 42px; height: 42px; }
-  .ghost-btn.left  { left: 14px; }
-  .ghost-btn.right { right: 14px; }
-  #timeline { width: 86vw; bottom: 70px; }
-  #tiktak, #hint { font-size: 9px; bottom: 16px; }
+/* ---- Mobile Toolbar (floating action bar) ---- */
+#mobile-toolbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  display: none;
+  justify-content: space-around;
+  align-items: center;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(8,12,18,0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  z-index: 50;
+}
+#mobile-toolbar button {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--ink);
+  font-size: 18px;
+  font-family: inherit;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#mobile-toolbar button:active {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.3);
+}
+#mobile-toolbar button.active {
+  background: rgba(245,168,192,0.15);
+  border-color: var(--warm-bright);
+  color: var(--warm-bright);
+}
+#mobile-toolbar .mob-label {
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 4px;
+}
+.mob-btn-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ============================================= */
+/*  Responsive: Tablet (481px – 1024px)          */
+/* ============================================= */
+@media (max-width: 1024px) {
+  .yr-num { font-size: 52px; }
+  .yr-input { font-size: 52px; width: 5ch; }
+  #year-readout { top: 24px; left: 24px; }
+  #brand { top: 24px; right: 24px; font-size: 9px; }
+  #brand .sub { font-size: 8px; }
+  .dt-month { font-size: 56px; }
+  .dt-anom { font-size: 72px; }
+  #detail { padding: 60px 28px 60px; }
+  #info-overlay { padding: 48px 28px 60px; }
+  .info-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .acties-grid { grid-template-columns: repeat(2, 1fr); }
+  #timeline { width: 80vw; }
+  .ghost-btn { display: none; }
+}
+
+/* ============================================= */
+/*  Responsive: Phone (≤ 480px)                  */
+/* ============================================= */
+@media (max-width: 480px) {
+  /* Show mobile toolbar */
+  #mobile-toolbar { display: flex; }
+
+  /* Year readout */
+  .yr-num { font-size: 36px; }
+  .yr-input { font-size: 36px; width: 5ch; }
+  #year-readout { top: 16px; left: 16px; }
+  .yr-meta { font-size: 9px; letter-spacing: 0.25em; }
+
+  /* Hide desktop-only elements */
+  #brand { display: none; }
+  #drag-hint { display: none; }
+  #marey-indicator { display: none !important; }
+  #info-indicator { display: none !important; }
+  #timeline { display: none; }
   #hint { display: none; }
-  .dt-month { font-size: 48px; }
-  .dt-anom { font-size: 64px; }
+  .ghost-btn { display: none; }
+
+  /* Help button above toolbar */
+  #help-btn { bottom: 80px; right: 16px; }
+
+  /* Detail overlay */
+  #detail { padding: 40px 16px 80px; }
+  #detail-close { top: 12px; right: 16px; width: 40px; height: 40px; }
+  .detail-head { padding-left: 14px; margin-bottom: 36px; }
+  .dt-year { font-size: 11px; letter-spacing: 0.3em; }
+  .dt-month { font-size: 36px; margin-bottom: 16px; }
+  .dt-anom { font-size: 48px; }
+  .dt-label { font-size: 11px; letter-spacing: 0.2em; margin-top: 12px; }
+  .detail-body h3 { font-size: 18px; }
+  .dt-intro { font-size: 13px; }
+  #month-chart { height: 220px; margin: 12px 0 20px; }
+  .dt-foot { flex-wrap: wrap; gap: 16px; font-size: 11px; }
+
+  /* Cijfers grid */
+  #cijfers-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 28px 0 24px; }
+  .cijfer-card { padding: 16px 14px; border-radius: 10px; }
+  .cij-value { font-size: 22px; }
+  .cij-label { font-size: 8px; }
+
+  /* Verhaal */
+  .verhaal-text { font-size: 14px; line-height: 1.65; }
+
+  /* Info overlay */
+  #info-overlay { padding: 32px 16px 80px; }
+  #info-close { top: 12px; right: 16px; width: 40px; height: 40px; }
+  .info-lead { font-size: 20px; margin-bottom: 20px; }
+  .info-body { font-size: 13px; }
+  .info-stats-row { grid-template-columns: 1fr; gap: 12px; }
+  .info-stat { padding: 20px 18px; }
+  .info-stat-big { font-size: 24px; }
+  .info-stat-label { font-size: 12px; }
+  .gevolgen-grid { grid-template-columns: 1fr; gap: 12px; }
+  .gevolg-card { padding: 20px 18px; }
+  .gevolg-data { font-size: 18px; }
+  .gevolg-text { font-size: 12px; }
+  .acties-grid { grid-template-columns: 1fr; gap: 10px; }
+  .actie-card { padding: 16px 14px; }
+  .actie-categorie { margin: 24px 0 12px; }
+  .info-heading { font-size: 10px; letter-spacing: 0.4em; }
+  .bronnen-list li { font-size: 12px; }
+
+  /* Tour hints smaller */
+  .tour-caption { font-size: 9px; letter-spacing: 0.2em; }
+  .tour-glow { width: 10px; height: 10px; }
+  .tour-hint { gap: 10px; }
+
+  /* Year avg label */
+  .year-avg-label .big { font-size: 16px; }
+  .year-avg-label .small { font-size: 8px; letter-spacing: 0.2em; }
+
+  /* Month labels */
+  .month-label { font-size: 8px; letter-spacing: 0.25em; }
 }
 
 /* ---- Phase 3: Marey Overlay ---- */
@@ -904,16 +1042,16 @@ body.intro-done #info-indicator { opacity: 0.6; }
   text-shadow: 0 0 20px rgba(0,0,0,0.8);
 }
 
-/* Responsive adjustments */
-@media (max-width: 720px) {
+/* Bottom responsive overrides for Feature sections (phone) */
+@media (max-width: 480px) {
   #cijfers-grid { grid-template-columns: repeat(2, 1fr); }
   .info-stats-row { grid-template-columns: 1fr; }
   .gevolgen-grid { grid-template-columns: 1fr; }
-  .acties-grid { grid-template-columns: repeat(2, 1fr); }
-  #info-overlay { padding: 40px 20px 60px; }
-  .info-lead { font-size: 22px; }
-  .info-stat-big { font-size: 28px; }
-  .dt-month { font-size: 48px; }
-  .dt-anom { font-size: 64px; }
-  #info-indicator { left: 30px; bottom: 58px; }
+  .acties-grid { grid-template-columns: 1fr; }
+  #info-overlay { padding: 32px 16px 80px; }
+  .info-lead { font-size: 20px; }
+  .info-stat-big { font-size: 24px; }
+  .dt-month { font-size: 36px; }
+  .dt-anom { font-size: 48px; }
+  #info-indicator { display: none !important; }
 }

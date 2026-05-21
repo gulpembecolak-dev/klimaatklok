@@ -29,10 +29,12 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
 
-const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 200);
-const CAM_Z_FOCUSED = 14.8;
-const CAM_Z_NAVIGATING = 17.5;
-const CAM_Z_INTRO_START = 65;
+const mobileFov = window.innerWidth <= 480 ? 48 : (window.innerWidth <= 768 ? 40 : 32);
+const camera = new THREE.PerspectiveCamera(mobileFov, window.innerWidth / window.innerHeight, 0.1, 200);
+const isMobile = ('ontouchstart' in window) || window.innerWidth <= 768;
+const CAM_Z_FOCUSED = isMobile ? 12.0 : 14.8;
+const CAM_Z_NAVIGATING = isMobile ? 14.5 : 17.5;
+const CAM_Z_INTRO_START = isMobile ? 45 : 65;
 // Off-axis position gives the 3D depth feel — slight 3/4 view of the clock
 const CAM_X = -1.6;
 const CAM_Y = 1.5;
@@ -77,6 +79,11 @@ controls.enableZoom = false;       // wheel reserved for year navigation
 controls.minPolarAngle = Math.PI * 0.05;
 controls.maxPolarAngle = Math.PI * 0.95;
 controls.target.copy(LOOK_AT);
+// Touch: single-finger = rotate only; block pinch-zoom (reserved for browser)
+if (isMobile) {
+  controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE };
+  controls.enableZoom = false;
+}
 
 // =====================================================
 //  Carousel — arc-arranged clocks orbiting around a pivot below the viewport
@@ -761,7 +768,7 @@ canvas.addEventListener('pointerup', (e) => {
   clickStarted = false;
   const dx = Math.abs(e.clientX - clickPressX);
   const dy = Math.abs(e.clientY - clickPressY);
-  if (dx < 5 && dy < 5) {
+  if (dx < 12 && dy < 12) {  // 12px threshold — wider for finger taps
     ndc.x = (e.clientX / window.innerWidth) * 2 - 1;
     ndc.y = -(e.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(ndc, camera);
@@ -807,6 +814,57 @@ canvas.addEventListener('wheel', (e) => {
     }
   }
 }, { passive: false });
+
+// =====================================================
+//  Touch gestures — swipe horizontal = year navigation
+// =====================================================
+let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+let touchSwiping = false;
+const SWIPE_THRESHOLD = 40; // px minimum for a year-swipe
+
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length !== 1) return;
+  const t = e.touches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+  touchStartTime = performance.now();
+  touchSwiping = false;
+}, { passive: true });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length !== 1) return;
+  const t = e.touches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  // If horizontal movement dominates → year swipe, prevent OrbitControls
+  if (Math.abs(dx) > Math.abs(dy) * 1.3 && Math.abs(dx) > 20) {
+    touchSwiping = true;
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchend', (e) => {
+  if (!touchSwiping) return;
+  const dt = performance.now() - touchStartTime;
+  if (dt > 800) return; // too slow, not a swipe
+  const touch = e.changedTouches[0];
+  const dx = touch.clientX - touchStartX;
+  if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+
+  if (mareyMode) {
+    // In Marey mode: swipe controls temporal window
+    if (dx > 0) targetMareyWindow = Math.max(1, Math.round(targetMareyWindow) - 2);
+    else targetMareyWindow = Math.min(TOTAL_YEARS, Math.round(targetMareyWindow) + 2);
+  } else {
+    // Normal mode: swipe changes year
+    if (dx > 0) { setTargetYear(currentYear - 1); markEngaged(); }
+    else { setTargetYear(currentYear + 1); markEngaged(); }
+  }
+  touchSwiping = false;
+}, { passive: true });
+
+// Prevent iOS bounce on overlays
+document.getElementById('detail').addEventListener('touchmove', (e) => e.stopPropagation(), { passive: true });
+document.getElementById('info-overlay').addEventListener('touchmove', (e) => e.stopPropagation(), { passive: true });
 
 // =====================================================
 //  Detail overlay (enriched — Feature A)
@@ -1207,6 +1265,9 @@ function animate() {
 // =====================================================
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
+  // Dynamic FOV for mobile orientation changes
+  const newFov = window.innerWidth <= 480 ? 48 : (window.innerWidth <= 768 ? 40 : 32);
+  camera.fov = newFov;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
@@ -1263,6 +1324,39 @@ const _showInfoHint = setInterval(() => {
 }, 200);
 
 // =====================================================
+//  Mobile Toolbar Bindings
+// =====================================================
+const mobPrev = document.getElementById('mob-prev');
+const mobNext = document.getElementById('mob-next');
+const mobStapeling = document.getElementById('mob-stapeling');
+const mobInfo = document.getElementById('mob-info');
+
+if (mobPrev) {
+  mobPrev.addEventListener('click', () => {
+    setTargetYear(currentYear - 1);
+    markEngaged();
+  });
+}
+if (mobNext) {
+  mobNext.addEventListener('click', () => {
+    setTargetYear(currentYear + 1);
+    markEngaged();
+  });
+}
+if (mobStapeling) {
+  mobStapeling.addEventListener('click', () => {
+    toggleMarey();
+    mobStapeling.classList.toggle('active', mareyMode);
+  });
+}
+if (mobInfo) {
+  mobInfo.addEventListener('click', () => {
+    if (infoOverlay.hidden) openInfo();
+    else closeInfo();
+  });
+}
+
+// =====================================================
 //  Feature C: Cinematic Tour (onboarding)
 // =====================================================
 let _tourTimeouts = [];
@@ -1278,61 +1372,76 @@ function runTour() {
   if (_tourClickFn) document.removeEventListener('click', _tourClickFn);
   if (_tourKeyFn) document.removeEventListener('keydown', _tourKeyFn);
 
+  const _isMobileTour = window.innerWidth <= 480;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  // Clamp position within safe viewport margins
+  function clampPos(pos) {
+    return {
+      x: Math.max(24, Math.min(w - 140, pos.x)),
+      y: Math.max(24, Math.min(h - 80, pos.y))
+    };
+  }
+
   const tourSteps = [
     {
-      // Clock face — drag to rotate
-      getPos: () => {
-        const cx = window.innerWidth / 2;
-        const cy = window.innerHeight / 2 - 40;
-        return { x: cx + 120, y: cy - 80 };
-      },
-      caption: 'sleep om te draaien'
+      // Clock face — drag/swipe to rotate
+      getPos: () => clampPos({
+        x: w / 2 + (_isMobileTour ? 40 : 120),
+        y: h / 2 - (_isMobileTour ? 30 : 80)
+      }),
+      caption: _isMobileTour ? 'veeg om te draaien' : 'sleep om te draaien'
     },
     {
       // Year readout — click to type
       getPos: () => {
         const el = document.getElementById('year-readout');
         const r = el.getBoundingClientRect();
-        return { x: r.left + r.width / 2, y: r.bottom + 12 };
+        return clampPos({ x: r.left + r.width / 2, y: r.bottom + 12 });
       },
       caption: 'klik om in te typen'
     },
     {
-      // Cone tip — click for details (right on FEB cone body)
+      // Cone tip — click/tap for details (right on FEB cone body)
       getPos: () => {
         const labels = document.querySelectorAll('.month-label');
         const feb = labels[1]; // FEB = index 1, biggest warm cone in 2026
         if (feb) {
           const r = feb.getBoundingClientRect();
-          const cx = window.innerWidth / 2;
-          const cy = window.innerHeight / 2;
+          const cx = w / 2;
+          const cy = h / 2;
           const lx = r.left + r.width / 2;
           const ly = r.top + r.height / 2;
           // 15% from label toward center = right on the cone body
-          return { x: lx + (cx - lx) * 0.15, y: ly + (cy - ly) * 0.15 };
+          return clampPos({ x: lx + (cx - lx) * 0.15, y: ly + (cy - ly) * 0.15 });
         }
-        return { x: window.innerWidth * 0.7, y: window.innerHeight * 0.75 };
+        return clampPos({ x: w * 0.65, y: h * 0.65 });
       },
-      caption: 'klik voor details'
-    },
-    {
-      // S key — stapeling mode
-      getPos: () => {
-        const el = document.getElementById('marey-indicator');
-        if (!el) return { x: 80, y: window.innerHeight - 40 };
-        const r = el.getBoundingClientRect();
-        return { x: r.left + r.width / 2, y: r.top - 12 };
-      },
-      caption: 'stapeling'
-    },
-    {
-      // Scroll area — scroll for years (left side empty area)
-      getPos: () => {
-        return { x: window.innerWidth * 0.2, y: window.innerHeight * 0.5 };
-      },
-      caption: 'scroll voor jaren'
+      caption: _isMobileTour ? 'tik voor details' : 'klik voor details'
     }
   ];
+
+  // On desktop: add extra steps for S key and scroll area
+  if (!_isMobileTour) {
+    tourSteps.push(
+      {
+        // S key — stapeling mode
+        getPos: () => {
+          const el = document.getElementById('marey-indicator');
+          if (!el) return { x: 80, y: h - 40 };
+          const r = el.getBoundingClientRect();
+          return { x: r.left + r.width / 2, y: r.top - 12 };
+        },
+        caption: 'stapeling'
+      },
+      {
+        // Scroll area — scroll for years (left side empty area)
+        getPos: () => ({ x: w * 0.2, y: h * 0.5 }),
+        caption: 'scroll voor jaren'
+      }
+    );
+  }
 
   const hints = [];
   let tourDismissed = false;
