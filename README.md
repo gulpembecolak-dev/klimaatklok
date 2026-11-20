@@ -1,6 +1,6 @@
 # Klimaatklok
 
-Monthly temperature anomalies for Uccle (Ukkel), Belgium, drawn as a ring of clocks: one clock per year from 2015 to 2040, one cone per month. A cone pointing outward means warmer than the 1991–2020 normal.
+Monthly temperature anomalies for Uccle (Ukkel), Belgium, drawn as a ring of clocks: one clock per year from 2015 to 2040, one cone per month. A cone pointing toward you means warmer than the 1991–2020 normal, one pointing away means colder.
 
 **Live:** https://gulpembecolak-dev.github.io/klimaatklok/
 
