@@ -1,6 +1,7 @@
 /* ----- Klimaatklok 3D — data (Open-Meteo) -----
  * Maandelijkse temperatuuranomalieën Ukkel (50.79°N, 4.36°E)
- * Anomalie = maandgemiddelde − klimaatnorm 1991-2020.
+ * Anomalie = maandgemiddelde − normaal 1991-2020 van dezelfde bron
+ * (ERA5 voor metingen, het eigen modelklimaat voor de projectie).
  *
  * data/klimaat.json  — volledige gemeten maanden (ERA5) + projectie (CMIP6
  *                       EC-Earth3P-HR). Elke maand ververst door een GitHub
@@ -41,7 +42,7 @@ await (async () => {
   if (start > eind) return;
   const iso = d => d.toISOString().slice(0, 10);
   const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${LAT}&longitude=${LON}`
-    + `&start_date=${iso(start)}&end_date=${iso(eind)}&daily=temperature_2m_mean&timezone=Europe%2FBrussels`;
+    + `&models=era5&start_date=${iso(start)}&end_date=${iso(eind)}&daily=temperature_2m_mean&timezone=Europe%2FBrussels`;
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 5000);
@@ -152,9 +153,9 @@ function generateVerhaal(monthIdx, year, anomaly) {
   if (isVoorsp) {
     zin1 = `De CMIP6-projectie (EC-Earth3P-HR, SSP5-8.5) suggereert dat ${maand.toLowerCase()} ${year} ${intensiteit} zou zijn in Ukkel, met een anomalie van ${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(1).replace('.', ',')} °C ten opzichte van de klimaatnorm 1991–2020.`;
   } else if (status === 'lopend') {
-    zin1 = `${maand} ${year} is nog bezig. Over de eerste ${LOPEND_DAGEN} dagen lag de temperatuur in Ukkel ${absAnom.toFixed(1).replace('.', ',')} °C ${sign ? 'boven' : 'onder'} de klimaatnorm van ${mc.norm.toFixed(1).replace('.', ',')} °C — een voorlopig cijfer.`;
+    zin1 = `${maand} ${year} is nog bezig. Over de eerste ${LOPEND_DAGEN} dagen lag de temperatuur in Ukkel ${absAnom.toFixed(1).replace('.', ',')} °C ${sign ? 'boven' : 'onder'} de klimaatnorm van ${KLIMAATNORM_1991_2020[monthIdx].toFixed(1).replace('.', ',')} °C — een voorlopig cijfer.`;
   } else {
-    zin1 = `${maand} ${year} was ${intensiteit} in Ukkel — de maandgemiddelde temperatuur lag ${absAnom.toFixed(1).replace('.', ',')} °C ${sign ? 'boven' : 'onder'} de klimaatnorm van ${mc.norm.toFixed(1).replace('.', ',')} °C (1991–2020).`;
+    zin1 = `${maand} ${year} was ${intensiteit} in Ukkel — de maandgemiddelde temperatuur lag ${absAnom.toFixed(1).replace('.', ',')} °C ${sign ? 'boven' : 'onder'} de klimaatnorm van ${KLIMAATNORM_1991_2020[monthIdx].toFixed(1).replace('.', ',')} °C (1991–2020).`;
   }
 
   return `${zin1} ${mc.context}`;

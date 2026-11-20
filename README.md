@@ -14,7 +14,7 @@ Every month on every clock has one of three states:
 - **Running:** the current month up to yesterday, fetched live by the browser and marked as provisional (`−0,3° t/m 19`).
 - **Projected:** any month that hasn't happened yet, taken from one CMIP6 HighResMIP model run (EC-Earth3P-HR) via the [Open-Meteo Climate API](https://open-meteo.com/en/docs/climate-api). In the current year these are drawn faint and marked `≈`. A single model run gives a plausible path, not a forecast for a specific month.
 
-The anomaly is the monthly mean minus the KMI normal for 1991–2020. Each month label carries its value in small type.
+The anomaly is the monthly mean minus the 1991–2020 normal of the same source: ERA5 for measured months, the model's own 1991–2020 climate for projections (this removes the model's bias of up to 0.9 °C). Measured values use `models=era5` explicitly; checked against the Uccle weather station (Meteostat 06447) they agree within 0.17 °C on average over 124 months. Each month label carries its value in small type.
 
 ## How it stays current
 

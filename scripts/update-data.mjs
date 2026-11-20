@@ -1,13 +1,16 @@
 // Schrijft data/klimaat.json voor Ukkel (50.79°N, 4.36°E):
 //   gemeten   — maandanomalieën uit ERA5 (Open-Meteo Archive), alleen volledige maanden
 //   projectie — maandanomalieën uit CMIP6 EC-Earth3P-HR (Open-Meteo Climate API)
-// Anomalie = maandgemiddelde − KMI-klimaatnorm 1991–2020.
+// Anomalie = maandgemiddelde − normaal 1991–2020 van DEZELFDE bron:
+//   gemeten   t.o.v. ERA5 1991–2020 (zelfde rastercel)
+//   projectie t.o.v. het eigen 1991–2020-klimaat van het model (haalt de modelbias weg)
+// Bewust models=era5: de standaardmix (best_match) wisselt voor recente maanden
+// van model, wat tot 0,8 °C verschil gaf met weerstation Ukkel.
 // De lopende maand haalt de browser zelf live op (zie data.js).
 // Geen dependencies: node scripts/update-data.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const LAT = 50.79, LON = 4.36, VAN = 2015, TOT = 2040;
-const NORM = [3.27, 3.72, 6.34, 9.51, 13.18, 16.10, 18.15, 17.96, 14.89, 11.19, 6.95, 3.94];
 const dagenIn = (j, m) => new Date(Date.UTC(j, m + 1, 0)).getUTCDate();
 const rond = v => Math.round(v * 10) / 10;
 
@@ -20,8 +23,19 @@ async function haal(url) {
   }
 }
 
+// Normaal 1991–2020 per kalendermaand (°C, 2 decimalen)
+function normaal(daily, sleutel) {
+  const som = Array(12).fill(0), n = Array(12).fill(0);
+  daily.time.forEach((t, i) => {
+    const v = daily[sleutel][i];
+    if (v == null || t < '1991' || t >= '2021') return;
+    const m = +t.slice(5, 7) - 1; som[m] += v; n[m]++;
+  });
+  return som.map((x, m) => Math.round(x / n[m] * 100) / 100);
+}
+
 // Daggemiddelden → { jaar: [12 anomalieën] }; onvolledige maanden blijven null
-function perMaand(daily, sleutel, volledigVereist) {
+function perMaand(daily, sleutel, volledigVereist, NORM, vanJaar) {
   const som = {}, n = {};
   daily.time.forEach((t, i) => {
     const v = daily[sleutel][i];
@@ -32,6 +46,7 @@ function perMaand(daily, sleutel, volledigVereist) {
   const rijen = {};
   for (const k of Object.keys(n).sort()) {
     const j = +k.slice(0, 4), m = +k.slice(5) - 1;
+    if (j < vanJaar) continue;
     if (volledigVereist && n[k] < dagenIn(j, m)) continue;
     (rijen[j] ||= Array(12).fill(null))[m] = rond(som[k] / n[k] - NORM[m]);
   }
@@ -41,13 +56,16 @@ function perMaand(daily, sleutel, volledigVereist) {
 const gisteren = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
 const basis = `latitude=${LAT}&longitude=${LON}&daily=temperature_2m_mean&timezone=Europe%2FBrussels`;
 
-const gemeten = perMaand(await haal(
-  `https://archive-api.open-meteo.com/v1/archive?${basis}&start_date=${VAN}-01-01&end_date=${gisteren}`
-), 'temperature_2m_mean', true);
+const K = 'temperature_2m_mean';
+const era5 = await haal(
+  `https://archive-api.open-meteo.com/v1/archive?${basis}&models=era5&start_date=1991-01-01&end_date=${gisteren}`);
+const model = await haal(
+  `https://climate-api.open-meteo.com/v1/climate?${basis}&models=EC_Earth3P_HR&start_date=1991-01-01&end_date=${TOT}-12-31`);
 
-const projectie = perMaand(await haal(
-  `https://climate-api.open-meteo.com/v1/climate?${basis}&models=EC_Earth3P_HR&start_date=${VAN}-01-01&end_date=${TOT}-12-31`
-), 'temperature_2m_mean', false);
+const NORM = normaal(era5, K);
+const NORM_MODEL = normaal(model, K);
+const gemeten = perMaand(era5, K, true, NORM, VAN);
+const projectie = perMaand(model, K, false, NORM_MODEL, VAN);
 
 let laatsteMaand = null;
 for (const j of Object.keys(gemeten)) gemeten[j].forEach((v, m) => {
@@ -61,7 +79,9 @@ const blok = naam => obj => `  "${naam}": {\n` + Object.keys(obj).sort()
 const inhoud = (bijgewerkt) => '{\n'
   + `  "bijgewerkt": "${bijgewerkt}",\n`
   + `  "plaats": "Ukkel, 50.79°N 4.36°E",\n`
+  + `  "bron": "ERA5 (Open-Meteo, models=era5) · CMIP6 EC-Earth3P-HR",\n`
   + `  "norm": ${rij(NORM)},\n`
+  + `  "normModel": ${rij(NORM_MODEL)},\n`
   + `  "laatsteMaand": "${laatsteMaand}",\n`
   + blok('gemeten')(gemeten) + ',\n'
   + blok('projectie')(projectie) + '\n}\n';

@@ -10,7 +10,7 @@ import {
   KLIMAATNORM_1991_2020, MAAND_CONTEXT,
   isVoorspelling, maandReeks, generateVerhaal,
   celStatus, isGemeten, LOPEND_DAGEN
-} from './data.js?v=7';
+} from './data.js?v=8';
 
 // =====================================================
 //  Renderer + scene + camera
