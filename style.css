@@ -1055,3 +1055,18 @@ body.intro-done #info-indicator { opacity: 0.6; }
   .dt-anom { font-size: 48px; }
   #info-indicator { display: none !important; }
 }
+
+/* Kleine waarde onder elke maandnaam */
+.month-label { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.month-label .ml-waarde {
+  font-size: 8px;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255,255,255,0.55);
+  text-transform: none;
+}
+.month-label[data-status="projectie"] .ml-waarde { color: rgba(255,255,255,0.3); font-style: italic; }
+.month-label[data-status="lopend"] .ml-waarde { color: var(--alert); opacity: 0.8; }
+.month-label[data-status="leeg"] .ml-waarde { opacity: 0.25; }
+@media (max-width: 600px) { .month-label .ml-waarde { font-size: 7px; } }

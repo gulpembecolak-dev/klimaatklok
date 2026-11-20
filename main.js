@@ -8,8 +8,9 @@ import {
   JAAR_MIN, JAAR_MAX, LAATSTE_GEMETEN_JAAR,
   HUIDIGE_MAAND_INDEX, HUIDIG_JAAR,
   KLIMAATNORM_1991_2020, MAAND_CONTEXT,
-  isVoorspelling, maandReeks, generateVerhaal
-} from './data.js';
+  isVoorspelling, maandReeks, generateVerhaal,
+  celStatus, isGemeten, LOPEND_DAGEN
+} from './data.js?v=7';
 
 // =====================================================
 //  Renderer + scene + camera
@@ -32,7 +33,15 @@ const scene = new THREE.Scene();
 const mobileFov = window.innerWidth <= 480 ? 48 : (window.innerWidth <= 768 ? 40 : 32);
 const camera = new THREE.PerspectiveCamera(mobileFov, window.innerWidth / window.innerHeight, 0.1, 200);
 const isMobile = ('ontouchstart' in window) || window.innerWidth <= 768;
-const CAM_Z_FOCUSED = isMobile ? 12.0 : 14.8;
+// Op smalle (staande) schermen de camera zo ver terugzetten dat de klok
+// mét maandlabels in de breedte past.
+const KLOK_HALVE_BREEDTE = 4.6;   // R × ~1.4, inclusief labels
+function camZFocused() {
+  const basis = isMobile ? 12.0 : 14.8;
+  const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+  return Math.max(basis, KLOK_HALVE_BREEDTE / halfH);
+}
+let CAM_Z_FOCUSED = camZFocused();
 const CAM_Z_NAVIGATING = isMobile ? 14.5 : 17.5;
 const CAM_Z_INTRO_START = isMobile ? 45 : 65;
 // Off-axis position gives the 3D depth feel — slight 3/4 view of the clock
@@ -126,10 +135,10 @@ const C_FUT_WARM_HI  = [220,   0,  30];
 const C_COOL_LO      = [180, 220, 250];
 const C_COOL_HI      = [ 40, 130, 220];
 
-function spikeColors(anomaly, year) {
+function spikeColors(anomaly, year, status = celStatus(year, 0)) {
   const mag = Math.min(Math.abs(anomaly) / MAG_REF, 1);
   const isWarm = anomaly >= 0;
-  const isFuture = year > LAATSTE_GEMETEN_JAAR;
+  const isFuture = status === 'projectie';
   let baseCol, tipCol;
   if (isWarm) {
     baseCol = C_BASE_WARM;
@@ -146,13 +155,19 @@ function spikeColors(anomaly, year) {
 // =====================================================
 //  Klok factory — build one full clock for a year
 // =====================================================
-function buildSpike(anomaly, year, monthIdx, isCurrentYearAndMonth) {
+function opacityMul(year, status) {
+  if (status === 'lopend') return 0.55;
+  if (status === 'projectie' && year <= HUIDIG_JAAR) return 0.35;
+  return 1;
+}
+
+function buildSpike(anomaly, year, monthIdx, isCurrentYearAndMonth, status = 'gemeten') {
   const angle = -Math.PI / 2 + (monthIdx / 12) * Math.PI * 2;
   const length = Math.max(Math.abs(anomaly) * SCALE_FACTOR, MIN_SPIKE);
   const isWarm = anomaly >= 0;
   const mag = Math.min(Math.abs(anomaly) / MAG_REF, 1); // 0..1 normalized magnitude
 
-  const { baseCol, tipCol } = spikeColors(anomaly, year);
+  const { baseCol, tipCol } = spikeColors(anomaly, year, status);
   const geo = new THREE.ConeGeometry(CONE_RADIUS, length, 24);
 
   const baseColor3 = new THREE.Color().setRGB(baseCol[0]/255, baseCol[1]/255, baseCol[2]/255, THREE.SRGBColorSpace);
@@ -186,7 +201,8 @@ function buildSpike(anomaly, year, monthIdx, isCurrentYearAndMonth) {
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff, vertexColors: true,
     transparent: true,
-    opacity: 0.92 - mag * 0.15,          // hotter = slightly more translucent
+    // projectie binnen het huidige jaar en de lopende maand: zichtbaar maar teruggetrokken
+    opacity: (0.92 - mag * 0.15) * opacityMul(year, status),
     roughness: _lerp(0.35, 0.12, mag),    // hotter = smoother glass
     metalness: 0.0,
     clearcoat: 1.0,
@@ -211,7 +227,8 @@ function buildSpike(anomaly, year, monthIdx, isCurrentYearAndMonth) {
     (isWarm ? 1 : -1) * length / 2
   );
   cone.userData = {
-    year, monthIdx, anomaly, isWarm, mag,
+    year, monthIdx, anomaly, isWarm, mag, status,
+    baseOpacity: mat.opacity,
     isCurrent: isCurrentYearAndMonth,
     baseEmissive  // store for animation modulation
   };
@@ -269,7 +286,7 @@ function buildClock(year) {
     new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 })
   ));
 
-  // --- Hand pointing to current real month (Mei) ---
+  // --- Hand pointing to current real month ---
   const handLen = R * 0.80;
   const handGeo = new THREE.BoxGeometry(0.025, handLen, 0.012);
   handGeo.translate(0, handLen / 2, 0);
@@ -296,7 +313,7 @@ function buildClock(year) {
     values.forEach((anomaly, m) => {
       if (anomaly == null || isNaN(anomaly)) return;
       const isCurrent = (year === HUIDIG_JAAR && m === HUIDIGE_MAAND_INDEX);
-      spikeGroup.add(buildSpike(anomaly, year, m, isCurrent));
+      spikeGroup.add(buildSpike(anomaly, year, m, isCurrent, celStatus(year, m)));
     });
   }
   group.add(spikeGroup);
@@ -398,7 +415,7 @@ for (let y = JAAR_MIN; y <= JAAR_MAX; y++) {
     const length = Math.max(Math.abs(anomaly) * SCALE_FACTOR, MIN_SPIKE);
     const isWarm = anomaly >= 0;
     const mag = Math.min(Math.abs(anomaly) / MAG_REF, 1);
-    const { baseCol, tipCol } = spikeColors(anomaly, y);
+    const { baseCol, tipCol } = spikeColors(anomaly, y, celStatus(y, m));
 
     // Simplified cone geometry (12 segments instead of 24 for perf)
     const geo = new THREE.ConeGeometry(CONE_RADIUS * 0.9, length, 12);
@@ -557,14 +574,17 @@ function updateYearAvg() {
     return;
   }
   const row = DATA[currentYear] || [];
-  const valid = row.filter(v => v != null && !isNaN(v));
+  // Huidig jaar: alleen volledig gemeten maanden tellen mee
+  const valid = currentYear === HUIDIG_JAAR
+    ? row.filter((v, m) => v != null && isGemeten(currentYear, m))
+    : row.filter(v => v != null && !isNaN(v));
   if (valid.length === 0) {
     yearAvgEl.style.display = 'none';
     return;
   }
   const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
   const sign = avg >= 0 ? '+' : '−';
-  const label = currentYear > LAATSTE_GEMETEN_JAAR
+  const label = isVoorspelling(currentYear)
     ? `VOORSPELD GEMIDDELDE · ${currentYear}`
     : (valid.length < 12
       ? `GEMIDDELDE · ${currentYear} · ${valid.length}/12 MND`
@@ -591,7 +611,7 @@ for (let m = 0; m < 12; m++) {
   const angle = -Math.PI / 2 + (m / 12) * Math.PI * 2;
   const el = document.createElement('div');
   el.className = 'month-label';
-  el.textContent = MAANDEN[m];
+  el.innerHTML = `<span class="ml-naam">${MAANDEN[m]}</span><span class="ml-waarde"></span>`;
   if (m === HUIDIGE_MAAND_INDEX) el.classList.add('current');
   labelLayer.appendChild(el);
   labelPoints.push({
@@ -600,10 +620,29 @@ for (let m = 0; m < 12; m++) {
   });
 }
 
+// Kleine waarde onder elke maandnaam: +3,4° · ≈ +1,2° (projectie) · −0,3° t/m 19 (lopend)
+const fmtGraad = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + '°';
+let labelsVoorJaar = null;
+function updateLabelValues() {
+  if (labelsVoorJaar === currentYear) return;
+  labelsVoorJaar = currentYear;
+  labelPoints.forEach((lp, m) => {
+    const v = DATA[currentYear]?.[m];
+    const st = celStatus(currentYear, m);
+    const span = lp.el.querySelector('.ml-waarde');
+    lp.el.dataset.status = st || 'leeg';
+    if (v == null) { span.textContent = '—'; return; }
+    if (st === 'projectie') span.textContent = '≈ ' + fmtGraad(v);
+    else if (st === 'lopend') span.textContent = `${fmtGraad(v)} t/m ${LOPEND_DAGEN}`;
+    else span.textContent = fmtGraad(v);
+  });
+}
+
 const _v = new THREE.Vector3();
 function updateLabels() {
   const focused = clocks.get(currentYear);
   if (!focused) return;
+  updateLabelValues();
   const w = window.innerWidth, h = window.innerHeight;
   for (const lp of labelPoints) {
     _v.copy(lp.pos3d);
@@ -873,7 +912,7 @@ const detailEl = document.getElementById('detail');
 
 function computeMonthStats(monthIdx) {
   const series = maandReeks(monthIdx);
-  const observed = series.filter(s => !s.voorspelling && s.anomaly != null && !isNaN(s.anomaly));
+  const observed = series.filter(s => !s.voorspelling && !s.voorlopig && s.anomaly != null && !isNaN(s.anomaly));
   if (observed.length === 0) return null;
 
   const vals = observed.map(s => s.anomaly);
@@ -902,7 +941,8 @@ function computeMonthStats(monthIdx) {
 }
 
 function openDetail({ year, monthIdx, anomaly, isWarm }) {
-  document.getElementById('dt-year').textContent = year + (isVoorspelling(year) ? ' · voorspelling' : '');
+  const st = celStatus(year, monthIdx);
+  document.getElementById('dt-year').textContent = year + (st === 'projectie' ? ' · projectie' : st === 'lopend' ? ' · voorlopig' : '');
   document.getElementById('dt-month').textContent = MAANDEN_VOL[monthIdx];
   const anomEl = document.getElementById('dt-anom');
   anomEl.textContent = (anomaly >= 0 ? '+' : '') + anomaly.toFixed(1).replace('.', ',') + ' °C';
@@ -1165,7 +1205,11 @@ function animate() {
         const fadeByDist = Math.max(0.15, 1 - dist * 0.12);
         const flicker = 0.03 * Math.sin(t * 1.2 + year * 0.7);
         clock.userData.spikeGroup.children.forEach(c => {
-          if (c.material) c.material.opacity = Math.min(1, fadeByDist + flicker);
+          if (c.material) c.material.opacity = Math.min(1, fadeByDist + flicker) * (c.userData.baseOpacity ?? 1);
+        });
+      } else if (isCurrent) {
+        clock.userData.spikeGroup.children.forEach(c => {
+          if (c.material && c.userData.baseOpacity != null) c.material.opacity = c.userData.baseOpacity;
         });
       }
     }
@@ -1269,6 +1313,7 @@ window.addEventListener('resize', () => {
   const newFov = window.innerWidth <= 480 ? 48 : (window.innerWidth <= 768 ? 40 : 32);
   camera.fov = newFov;
   camera.updateProjectionMatrix();
+  CAM_Z_FOCUSED = camZFocused();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
@@ -1406,7 +1451,12 @@ function runTour() {
       // Cone tip — click/tap for details (right on FEB cone body)
       getPos: () => {
         const labels = document.querySelectorAll('.month-label');
-        const feb = labels[1]; // FEB = index 1, biggest warm cone in 2026
+        // Grootste gemeten kegel van dit jaar (valt terug op februari)
+        let best = 1, bestV = -Infinity;
+        (DATA[HUIDIG_JAAR] || []).forEach((v, m) => {
+          if (v != null && isGemeten(HUIDIG_JAAR, m) && Math.abs(v) > bestV) { best = m; bestV = Math.abs(v); }
+        });
+        const feb = labels[best];
         if (feb) {
           const r = feb.getBoundingClientRect();
           const cx = w / 2;
