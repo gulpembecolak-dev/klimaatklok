@@ -9,8 +9,8 @@ import {
   HUIDIGE_MAAND_INDEX, HUIDIG_JAAR,
   KLIMAATNORM_1991_2020, MAAND_CONTEXT,
   isVoorspelling, maandReeks, generateVerhaal,
-  celStatus, isGemeten, LOPEND_DAGEN
-} from './data.js?v=8';
+  celStatus, isGemeten
+} from './data.js?v=9';
 
 // =====================================================
 //  Renderer + scene + camera
@@ -111,9 +111,14 @@ scene.add(carousel);
 const R = 3.3;
 const SPIKE_BASE_R = R * 0.86;
 const SCALE_FACTOR = 0.70;
+// Klok: kegels starten op de middelste ring (0,62 R); 1 °C = 0,40 eenheden.
+// Bij 55° kanteling valt +4 °C ongeveer op de buitenste ring.
+const KLOK_BASE_R = R * 0.62;
+const KLOK_SCALE = 0.40;
 const CONE_RADIUS = 0.11;
 const MIN_SPIKE = 0.10;
 const MAG_REF = 4.0;
+const SPIKE_TILT = THREE.MathUtils.degToRad(55); // 0 = recht naar de kijker, 90 = plat in het vlak
 
 // Phase 1 — luminous materiality constants
 const EMISSIVE_EXP = 2.8;       // exponential curve for emissive intensity
@@ -155,15 +160,10 @@ function spikeColors(anomaly, year, status = celStatus(year, 0)) {
 // =====================================================
 //  Klok factory — build one full clock for a year
 // =====================================================
-function opacityMul(year, status) {
-  if (status === 'lopend') return 0.55;
-  if (status === 'projectie' && year <= HUIDIG_JAAR) return 0.35;
-  return 1;
-}
 
 function buildSpike(anomaly, year, monthIdx, isCurrentYearAndMonth, status = 'gemeten') {
   const angle = -Math.PI / 2 + (monthIdx / 12) * Math.PI * 2;
-  const length = Math.max(Math.abs(anomaly) * SCALE_FACTOR, MIN_SPIKE);
+  const length = Math.max(Math.abs(anomaly) * KLOK_SCALE, MIN_SPIKE);
   const isWarm = anomaly >= 0;
   const mag = Math.min(Math.abs(anomaly) / MAG_REF, 1); // 0..1 normalized magnitude
 
@@ -201,8 +201,7 @@ function buildSpike(anomaly, year, monthIdx, isCurrentYearAndMonth, status = 'ge
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff, vertexColors: true,
     transparent: true,
-    // projectie binnen het huidige jaar en de lopende maand: zichtbaar maar teruggetrokken
-    opacity: (0.92 - mag * 0.15) * opacityMul(year, status),
+    opacity: 0.92 - mag * 0.15,
     roughness: _lerp(0.35, 0.12, mag),    // hotter = smoother glass
     metalness: 0.0,
     clearcoat: 1.0,
@@ -220,12 +219,21 @@ function buildSpike(anomaly, year, monthIdx, isCurrentYearAndMonth, status = 'ge
 
   const cone = new THREE.Mesh(geo, mat);
   cone.renderOrder = isCurrentYearAndMonth ? 10 : 0;
-  cone.rotation.x = isWarm ? Math.PI / 2 : -Math.PI / 2;
+  // Kegel half naar buiten, half naar de kijker gekanteld: zo blijft de 3D-diepte,
+  // maar is de lengte (= anomalie) ook van voren te vergelijken.
+  // Warm: naar buiten + naar voren. Koud: naar binnen + naar achter.
+  const sgn = isWarm ? 1 : -1;
+  const dir = new THREE.Vector3(
+    Math.cos(angle) * Math.sin(SPIKE_TILT),
+    Math.sin(angle) * Math.sin(SPIKE_TILT),
+    Math.cos(SPIKE_TILT)
+  ).multiplyScalar(sgn).normalize();
+  cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
   cone.position.set(
-    SPIKE_BASE_R * Math.cos(angle),
-    SPIKE_BASE_R * Math.sin(angle),
-    (isWarm ? 1 : -1) * length / 2
-  );
+    KLOK_BASE_R * Math.cos(angle),
+    KLOK_BASE_R * Math.sin(angle),
+    0
+  ).addScaledVector(dir, length / 2);
   cone.userData = {
     year, monthIdx, anomaly, isWarm, mag, status,
     baseOpacity: mat.opacity,
@@ -585,7 +593,7 @@ function updateYearAvg() {
   const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
   const sign = avg >= 0 ? '+' : '−';
   const label = isVoorspelling(currentYear)
-    ? `VOORSPELD GEMIDDELDE · ${currentYear}`
+    ? `PROJECTIE · GEMIDDELDE · ${currentYear}`
     : (valid.length < 12
       ? `GEMIDDELDE · ${currentYear} · ${valid.length}/12 MND`
       : `JAARGEMIDDELDE · ${currentYear}`);
@@ -606,7 +614,7 @@ function updateYearAvg() {
 //  Month labels — overlay synced to currently focused clock
 // =====================================================
 const labelPoints = [];
-const LABEL_R = R * 1.10;
+const LABEL_R = R * 1.16;
 for (let m = 0; m < 12; m++) {
   const angle = -Math.PI / 2 + (m / 12) * Math.PI * 2;
   const el = document.createElement('div');
@@ -620,7 +628,7 @@ for (let m = 0; m < 12; m++) {
   });
 }
 
-// Kleine waarde onder elke maandnaam: +3,4° · ≈ +1,2° (projectie) · −0,3° t/m 19 (lopend)
+// Kleine waarde onder elke maandnaam: +3,4° (gemeten) · ≈ +1,2° (projectie) · — (nog niet bekend)
 const fmtGraad = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + '°';
 let labelsVoorJaar = null;
 function updateLabelValues() {
@@ -633,7 +641,6 @@ function updateLabelValues() {
     lp.el.dataset.status = st || 'leeg';
     if (v == null) { span.textContent = '—'; return; }
     if (st === 'projectie') span.textContent = '≈ ' + fmtGraad(v);
-    else if (st === 'lopend') span.textContent = `${fmtGraad(v)} t/m ${LOPEND_DAGEN}`;
     else span.textContent = fmtGraad(v);
   });
 }
@@ -912,7 +919,7 @@ const detailEl = document.getElementById('detail');
 
 function computeMonthStats(monthIdx) {
   const series = maandReeks(monthIdx);
-  const observed = series.filter(s => !s.voorspelling && !s.voorlopig && s.anomaly != null && !isNaN(s.anomaly));
+  const observed = series.filter(s => !s.voorspelling && s.anomaly != null && !isNaN(s.anomaly));
   if (observed.length === 0) return null;
 
   const vals = observed.map(s => s.anomaly);
@@ -942,7 +949,7 @@ function computeMonthStats(monthIdx) {
 
 function openDetail({ year, monthIdx, anomaly, isWarm }) {
   const st = celStatus(year, monthIdx);
-  document.getElementById('dt-year').textContent = year + (st === 'projectie' ? ' · projectie' : st === 'lopend' ? ' · voorlopig' : '');
+  document.getElementById('dt-year').textContent = year + (st === 'projectie' ? ' · projectie' : '');
   document.getElementById('dt-month').textContent = MAANDEN_VOL[monthIdx];
   const anomEl = document.getElementById('dt-anom');
   anomEl.textContent = (anomaly >= 0 ? '+' : '') + anomaly.toFixed(1).replace('.', ',') + ' °C';
@@ -1111,7 +1118,7 @@ function renderMonthChart(monthIdx, highlightYear) {
   sepLbl.setAttribute('fill', 'rgba(200,212,232,0.7)');
   sepLbl.setAttribute('font-size', '9');
   sepLbl.setAttribute('letter-spacing', '0.18em');
-  sepLbl.textContent = 'VOORSPELLING →';
+  sepLbl.textContent = 'PROJECTIE →';
   svg.appendChild(sepLbl);
 
   // Feature A2 — Chart tooltip

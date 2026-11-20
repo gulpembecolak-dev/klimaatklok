@@ -6,13 +6,14 @@
  * data/klimaat.json  — volledige gemeten maanden (ERA5) + projectie (CMIP6
  *                       EC-Earth3P-HR). Elke maand ververst door een GitHub
  *                       Action (scripts/update-data.mjs).
- * Live aanvulling    — maanden na de laatste in het JSON-bestand (o.a. de
- *                       lopende maand) haalt de browser zelf bij Open-Meteo.
+ * Live aanvulling    — een maand die net voorbij is maar nog niet in het
+ *                       JSON-bestand staat, haalt de browser zelf bij Open-Meteo.
  *
  * Elke cel krijgt een status:
- *   'gemeten'   volledige maand, ERA5
- *   'lopend'    huidige maand t/m gisteren, voorlopig
- *   'projectie' nog niet gemeten → modelwaarde
+ *   'gemeten'   volledige, afgelopen maand (ERA5)
+ *   'projectie' maand in een TOEKOMSTIG jaar → modelwaarde
+ *   null        lopende of komende maand van het huidige jaar → blijft leeg
+ *               tot de maand voorbij is en de anomalie vaststaat
  */
 
 const LAT = 50.79, LON = 4.36;
@@ -33,12 +34,14 @@ const HUIDIG_JAAR = _now.getFullYear();
 const BRON = await fetch('data/klimaat.json', { cache: 'no-cache' }).then(r => r.json());
 const KLIMAATNORM_1991_2020 = BRON.norm;
 
-// --- 2. Live aanvulling: van de maand na BRON.laatsteMaand t/m gisteren ---
+// --- 2. Live aanvulling: maanden die net voorbij zijn maar nog niet in het
+//        JSON-bestand staan (de eerste dagen van een nieuwe maand). Alleen
+//        volledige maanden worden gebruikt. ---
 const LIVE = {};        // 'YYYY-MM' → { anomalie, dagen, volledig }
 await (async () => {
   const [lj, lm] = BRON.laatsteMaand.split('-').map(Number);
   const start = new Date(Date.UTC(lj, lm, 1));                 // eerste dag ná laatsteMaand
-  const eind = new Date(Date.UTC(_now.getFullYear(), _now.getMonth(), _now.getDate() - 1));
+  const eind = new Date(Date.UTC(_now.getFullYear(), _now.getMonth(), 0));  // laatste dag vorige maand
   if (start > eind) return;
   const iso = d => d.toISOString().slice(0, 10);
   const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${LAT}&longitude=${LON}`
@@ -69,7 +72,6 @@ await (async () => {
 // --- 3. Raster opbouwen: DATA[jaar][maand] + STATUS[jaar][maand] ---
 const DATA = {}, STATUS = {};
 const isVerleden = (y, m) => y < HUIDIG_JAAR || (y === HUIDIG_JAAR && m < HUIDIGE_MAAND_INDEX);
-const isNu = (y, m) => y === HUIDIG_JAAR && m === HUIDIGE_MAAND_INDEX;
 for (let y = JAAR_MIN; y <= JAAR_MAX; y++) {
   DATA[y] = Array(12).fill(null);
   STATUS[y] = Array(12).fill(null);
@@ -77,14 +79,11 @@ for (let y = JAAR_MIN; y <= JAAR_MAX; y++) {
     const g = BRON.gemeten[y]?.[m];
     const live = LIVE[`${y}-${String(m + 1).padStart(2, '0')}`];
     const p = BRON.projectie[y]?.[m];
-    if (g != null)                          { DATA[y][m] = g; STATUS[y][m] = 'gemeten'; }
-    else if (live?.volledig)                { DATA[y][m] = live.anomalie; STATUS[y][m] = 'gemeten'; }
-    else if (live && (isNu(y, m) || isVerleden(y, m))) { DATA[y][m] = live.anomalie; STATUS[y][m] = 'lopend'; }
-    else if (!isVerleden(y, m) && p != null) { DATA[y][m] = p; STATUS[y][m] = 'projectie'; }
+    if (g != null)                       { DATA[y][m] = g; STATUS[y][m] = 'gemeten'; }
+    else if (live?.volledig && isVerleden(y, m)) { DATA[y][m] = live.anomalie; STATUS[y][m] = 'gemeten'; }
+    else if (y > HUIDIG_JAAR && p != null) { DATA[y][m] = p; STATUS[y][m] = 'projectie'; }
   }
 }
-// Dagen in de lopende maand (voor het label "t/m 19/11")
-const LOPEND_DAGEN = LIVE[`${HUIDIG_JAAR}-${String(HUIDIGE_MAAND_INDEX + 1).padStart(2, '0')}`]?.dagen || 0;
 
 const celStatus = (y, m) => STATUS[y]?.[m] ?? null;
 const isGemeten = (y, m) => celStatus(y, m) === 'gemeten';
@@ -100,7 +99,7 @@ function maandReeks(monthIdx) {
   const reeks = [];
   for (let y = JAAR_MIN; y <= JAAR_MAX; y++) {
     const st = celStatus(y, monthIdx);
-    reeks.push({ year: y, anomaly: DATA[y][monthIdx], voorspelling: st === 'projectie', voorlopig: st === 'lopend' });
+    reeks.push({ year: y, anomaly: DATA[y][monthIdx], voorspelling: st === 'projectie' });
   }
   return reeks;
 }
@@ -152,8 +151,6 @@ function generateVerhaal(monthIdx, year, anomaly) {
   let zin1;
   if (isVoorsp) {
     zin1 = `De CMIP6-projectie (EC-Earth3P-HR, SSP5-8.5) suggereert dat ${maand.toLowerCase()} ${year} ${intensiteit} zou zijn in Ukkel, met een anomalie van ${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(1).replace('.', ',')} °C ten opzichte van de klimaatnorm 1991–2020.`;
-  } else if (status === 'lopend') {
-    zin1 = `${maand} ${year} is nog bezig. Over de eerste ${LOPEND_DAGEN} dagen lag de temperatuur in Ukkel ${absAnom.toFixed(1).replace('.', ',')} °C ${sign ? 'boven' : 'onder'} de klimaatnorm van ${KLIMAATNORM_1991_2020[monthIdx].toFixed(1).replace('.', ',')} °C — een voorlopig cijfer.`;
   } else {
     zin1 = `${maand} ${year} was ${intensiteit} in Ukkel — de maandgemiddelde temperatuur lag ${absAnom.toFixed(1).replace('.', ',')} °C ${sign ? 'boven' : 'onder'} de klimaatnorm van ${KLIMAATNORM_1991_2020[monthIdx].toFixed(1).replace('.', ',')} °C (1991–2020).`;
   }
@@ -162,7 +159,7 @@ function generateVerhaal(monthIdx, year, anomaly) {
 }
 
 export {
-  DATA, STATUS, celStatus, isGemeten, LOPEND_DAGEN, KLIMAATNORM_1991_2020,
+  DATA, STATUS, celStatus, isGemeten, KLIMAATNORM_1991_2020,
   JAAR_MIN, JAAR_MAX, LAATSTE_GEMETEN_JAAR,
   HUIDIGE_MAAND_INDEX, HUIDIG_JAAR,
   MAANDEN, MAANDEN_VOL, MAAND_CONTEXT,
