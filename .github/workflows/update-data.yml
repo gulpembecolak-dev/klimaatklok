@@ -1,0 +1,26 @@
+name: Data bijwerken
+
+on:
+  schedule:
+    - cron: '0 6 3 * *'   # elke 3e van de maand, 06:00 UTC (vorige maand is dan compleet)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/update-data.mjs
+      - name: Commit als er iets veranderde
+        run: |
+          git diff --quiet data.js && exit 0
+          git config user.name "klimaatklok-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "data: maandelijkse ERA5-update"
+          git push
