@@ -819,9 +819,35 @@ canvas.addEventListener('pointerup', (e) => {
     ndc.y = -(e.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(ndc, camera);
     const hits = raycaster.intersectObjects(allSpikes(), false);
-    if (hits.length) openDetail(hits[0].object.userData);
+    if (hits.length) { openDetail(hits[0].object.userData); return; }
+    // Dunne kegels zijn lastig te raken: kies de dichtstbijzijnde kegel van de
+    // gefocuste klok (afstand tot de lijn voet→punt op het scherm, max 32 px).
+    const near = nearestSpike(e.clientX, e.clientY, 32);
+    if (near) openDetail(near.userData);
   }
 });
+
+const _a = new THREE.Vector3(), _b = new THREE.Vector3();
+function toScreen(v) {
+  v.project(camera);
+  return { x: (v.x * 0.5 + 0.5) * window.innerWidth, y: (-v.y * 0.5 + 0.5) * window.innerHeight };
+}
+function nearestSpike(px, py, maxPx) {
+  const focused = clocks.get(currentYear);
+  if (!focused || mareyMode) return null;
+  let best = null, bestD = maxPx;
+  for (const cone of focused.userData.spikeGroup.children) {
+    const g = cone.geometry.parameters;           // ConeGeometry: height
+    _a.set(0, -g.height / 2, 0); _b.set(0, g.height / 2, 0);
+    cone.localToWorld(_a); cone.localToWorld(_b);
+    const A = toScreen(_a), B = toScreen(_b);
+    const vx = B.x - A.x, vy = B.y - A.y, len2 = vx * vx + vy * vy || 1;
+    const t = Math.max(0, Math.min(1, ((px - A.x) * vx + (py - A.y) * vy) / len2));
+    const d = Math.hypot(px - (A.x + t * vx), py - (A.y + t * vy));
+    if (d < bestD) { bestD = d; best = cone; }
+  }
+  return best;
+}
 
 // --- Wheel / trackpad scroll → navigate years ---
 let wheelAccum = 0;
