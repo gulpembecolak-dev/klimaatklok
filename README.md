@@ -8,7 +8,7 @@ Monthly temperature anomalies for Uccle (Ukkel), Belgium, drawn as a ring of clo
 
 ## What it shows
 
-Each cone is one month. It leans outward and toward you when the month was warmer than normal, and inward and away when it was colder. Its length is the anomaly in °C, and the small number under each month label gives the exact value.
+Each cone is one month. Warm months point toward you, cold months point away. Drag to rotate the clock and see both sides. Its length is the anomaly in °C, and the small number under each month label gives the exact value.
 
 - **Measured (2015 → last complete month):** ERA5 reanalysis via the [Open-Meteo Archive API](https://open-meteo.com/en/docs/historical-weather-api).
 - **Current year:** only months that have ended are shown. The running month and the months after it stay empty until their anomaly is known.

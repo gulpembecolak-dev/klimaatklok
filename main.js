@@ -111,14 +111,9 @@ scene.add(carousel);
 const R = 3.3;
 const SPIKE_BASE_R = R * 0.86;
 const SCALE_FACTOR = 0.70;
-// Klok: kegels starten op de middelste ring (0,62 R); 1 °C = 0,40 eenheden.
-// Bij 55° kanteling valt +4 °C ongeveer op de buitenste ring.
-const KLOK_BASE_R = R * 0.62;
-const KLOK_SCALE = 0.40;
 const CONE_RADIUS = 0.11;
 const MIN_SPIKE = 0.10;
 const MAG_REF = 4.0;
-const SPIKE_TILT = THREE.MathUtils.degToRad(55); // 0 = recht naar de kijker, 90 = plat in het vlak
 
 // Phase 1 — luminous materiality constants
 const EMISSIVE_EXP = 2.8;       // exponential curve for emissive intensity
@@ -163,7 +158,7 @@ function spikeColors(anomaly, year, status = celStatus(year, 0)) {
 
 function buildSpike(anomaly, year, monthIdx, isCurrentYearAndMonth, status = 'gemeten') {
   const angle = -Math.PI / 2 + (monthIdx / 12) * Math.PI * 2;
-  const length = Math.max(Math.abs(anomaly) * KLOK_SCALE, MIN_SPIKE);
+  const length = Math.max(Math.abs(anomaly) * SCALE_FACTOR, MIN_SPIKE);
   const isWarm = anomaly >= 0;
   const mag = Math.min(Math.abs(anomaly) / MAG_REF, 1); // 0..1 normalized magnitude
 
@@ -219,21 +214,12 @@ function buildSpike(anomaly, year, monthIdx, isCurrentYearAndMonth, status = 'ge
 
   const cone = new THREE.Mesh(geo, mat);
   cone.renderOrder = isCurrentYearAndMonth ? 10 : 0;
-  // Kegel half naar buiten, half naar de kijker gekanteld: zo blijft de 3D-diepte,
-  // maar is de lengte (= anomalie) ook van voren te vergelijken.
-  // Warm: naar buiten + naar voren. Koud: naar binnen + naar achter.
-  const sgn = isWarm ? 1 : -1;
-  const dir = new THREE.Vector3(
-    Math.cos(angle) * Math.sin(SPIKE_TILT),
-    Math.sin(angle) * Math.sin(SPIKE_TILT),
-    Math.cos(SPIKE_TILT)
-  ).multiplyScalar(sgn).normalize();
-  cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  cone.rotation.x = isWarm ? Math.PI / 2 : -Math.PI / 2;
   cone.position.set(
-    KLOK_BASE_R * Math.cos(angle),
-    KLOK_BASE_R * Math.sin(angle),
-    0
-  ).addScaledVector(dir, length / 2);
+    SPIKE_BASE_R * Math.cos(angle),
+    SPIKE_BASE_R * Math.sin(angle),
+    (isWarm ? 1 : -1) * length / 2
+  );
   cone.userData = {
     year, monthIdx, anomaly, isWarm, mag, status,
     baseOpacity: mat.opacity,
@@ -614,7 +600,7 @@ function updateYearAvg() {
 //  Month labels — overlay synced to currently focused clock
 // =====================================================
 const labelPoints = [];
-const LABEL_R = R * 1.16;
+const LABEL_R = R * 1.10;
 for (let m = 0; m < 12; m++) {
   const angle = -Math.PI / 2 + (m / 12) * Math.PI * 2;
   const el = document.createElement('div');
@@ -819,35 +805,10 @@ canvas.addEventListener('pointerup', (e) => {
     ndc.y = -(e.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(ndc, camera);
     const hits = raycaster.intersectObjects(allSpikes(), false);
-    if (hits.length) { openDetail(hits[0].object.userData); return; }
-    // Dunne kegels zijn lastig te raken: kies de dichtstbijzijnde kegel van de
-    // gefocuste klok (afstand tot de lijn voet→punt op het scherm, max 32 px).
-    const near = nearestSpike(e.clientX, e.clientY, 32);
-    if (near) openDetail(near.userData);
+    if (hits.length) openDetail(hits[0].object.userData);
   }
 });
 
-const _a = new THREE.Vector3(), _b = new THREE.Vector3();
-function toScreen(v) {
-  v.project(camera);
-  return { x: (v.x * 0.5 + 0.5) * window.innerWidth, y: (-v.y * 0.5 + 0.5) * window.innerHeight };
-}
-function nearestSpike(px, py, maxPx) {
-  const focused = clocks.get(currentYear);
-  if (!focused || mareyMode) return null;
-  let best = null, bestD = maxPx;
-  for (const cone of focused.userData.spikeGroup.children) {
-    const g = cone.geometry.parameters;           // ConeGeometry: height
-    _a.set(0, -g.height / 2, 0); _b.set(0, g.height / 2, 0);
-    cone.localToWorld(_a); cone.localToWorld(_b);
-    const A = toScreen(_a), B = toScreen(_b);
-    const vx = B.x - A.x, vy = B.y - A.y, len2 = vx * vx + vy * vy || 1;
-    const t = Math.max(0, Math.min(1, ((px - A.x) * vx + (py - A.y) * vy) / len2));
-    const d = Math.hypot(px - (A.x + t * vx), py - (A.y + t * vy));
-    if (d < bestD) { bestD = d; best = cone; }
-  }
-  return best;
-}
 
 // --- Wheel / trackpad scroll → navigate years ---
 let wheelAccum = 0;
