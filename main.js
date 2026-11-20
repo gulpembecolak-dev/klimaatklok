@@ -1445,12 +1445,7 @@ function runTour() {
       // Cone tip — click/tap for details (right on FEB cone body)
       getPos: () => {
         const labels = document.querySelectorAll('.month-label');
-        // Grootste gemeten kegel van dit jaar (valt terug op februari)
-        let best = 1, bestV = -Infinity;
-        (DATA[HUIDIG_JAAR] || []).forEach((v, m) => {
-          if (v != null && isGemeten(HUIDIG_JAAR, m) && Math.abs(v) > bestV) { best = m; bestV = Math.abs(v); }
-        });
-        const feb = labels[best];
+        const feb = labels[1]; // FEB = index 1, biggest warm cone in 2026
         if (feb) {
           const r = feb.getBoundingClientRect();
           const cx = w / 2;
