@@ -512,7 +512,7 @@ function toggleMarey() {
     targetMareyWindow = 1;
     yearDisplay.textContent = 'STAPELING';
     yearMeta.innerHTML = 'Scroll om jaren toe te voegen';
-    document.getElementById('drag-hint').style.opacity = '0';
+    document.getElementById('drag-hint')?.style.setProperty('opacity', '0');
   } else {
     yearDisplay.textContent = currentYear;
     yearMeta.innerHTML = metaText(currentYear);
@@ -1535,6 +1535,14 @@ function runTour() {
 
       document.body.appendChild(hint);
       hints.push(hint);
+
+      // Past de tekst niet rechts op het scherm? Punt blijft staan, tekst gaat links ervan.
+      const box = hint.getBoundingClientRect();
+      if (box.right > w - 12) {
+        hint.classList.add('flip');
+        const glowW = glow.getBoundingClientRect().width;
+        hint.style.left = Math.max(12, pos.x + glowW - box.width) + 'px';
+      }
 
       // Fade in after a tick
       requestAnimationFrame(() => {
