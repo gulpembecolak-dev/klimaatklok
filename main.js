@@ -1179,6 +1179,10 @@ function animate() {
     camera.position.z += (camTargetZ - camera.position.z) * 0.10;
     camera.lookAt(LOOK_AT);
   } else if (!controls.enabled) {
+    // Intro klaar: camera exact op de eindpositie zetten. Op trage apparaten
+    // (weinig frames in 2,2 s) bleef hij anders halverwege staan.
+    camera.position.z = CAM_Z_FOCUSED;
+    camera.lookAt(LOOK_AT);
     controls.enabled = true;
     controls.update();
   }
